@@ -1,0 +1,727 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameWorld - Ultimate Gaming Store</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.2/dist/gsap.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-dark: #0a0a1a;
+            --secondary-dark: #1a1a2e;
+            --accent-purple: #8a2be2;
+            --accent-blue: #1e40af;
+            --neon-blue: #00b4d8;
+            --neon-purple: #bc00dd;
+        }
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--secondary-dark) 100%);
+            color: white;
+            overflow-x: hidden;
+        }
+        
+        .hero-font {
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .section {
+            min-height: 100vh;
+            padding: 2rem;
+            display: none;
+        }
+        
+        .active {
+            display: block;
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .glow {
+            box-shadow: 0 0 20px rgba(138, 43, 226, 0.3);
+        }
+        
+        .glow-hover:hover {
+            box-shadow: 0 0 30px rgba(138, 43, 226, 0.6);
+            transform: translateY(-2px);
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 30px var(--neon-purple);
+        }
+        
+        .product-card {
+            transform-style: preserve-3d;
+            transition: transform 0.5s ease;
+        }
+        
+        .product-card:hover {
+            transform: translateY(-10px) rotateX(5deg);
+        }
+        
+        #model-container {
+            width: 100%;
+            height: 400px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .cart-item {
+            border-left: 4px solid var(--accent-purple);
+            background: rgba(30, 64, 175, 0.1);
+        }
+        
+        .checkout-step {
+            border: 2px solid var(--accent-blue);
+            background: rgba(26, 26, 46, 0.8);
+        }
+        
+        @media (max-width: 768px) {
+            .section {
+                padding: 1rem;
+            }
+            
+            #model-container {
+                height: 300px;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen">
+    <!-- Navigation -->
+    <nav class="bg-black/90 backdrop-blur-md fixed w-full z-50 border-b border-purple-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-4">
+                    <h1 class="text-2xl font-bold hero-font neon-text">GAME<span class="text-purple-400">WORLD</span></h1>
+                </div>
+                
+                <div class="hidden md:flex space-x-8">
+                    <button onclick="showSection('home')" class="text-white hover:text-purple-400 transition-colors">Home</button>
+                    <button onclick="showSection('products')" class="text-white hover:text-purple-400 transition-colors">Products</button>
+                    <button onclick="showSection('cart')" class="text-white hover:text-purple-400 transition-colors">Cart</button>
+                    <button onclick="showSection('checkout')" class="text-white hover:text-purple-400 transition-colors">Checkout</button>
+                </div>
+                
+                <div class="flex items-center space-x-4">
+                    <div class="relative">
+                        <button onclick="showSection('cart')" class="p-2 bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4m0 0L7 13m0 0l-1.5 6h9m-9 0a2 2 0 100 4 2 2 0 000-4zm9 0a2 2 0 100 4 2 2 0 000-4z"></path>
+                            </svg>
+                            <span id="cart-count" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs flex items-center justify-center">0</span>
+                        </button>
+                    </div>
+                    
+                    <button class="md:hidden" onclick="toggleMobileMenu()">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobile-menu" class="md:hidden bg-black/95 backdrop-blur-md border-t border-purple-900 hidden">
+            <div class="px-2 pt-2 pb-3 space-y-1">
+                <button onclick="showSection('home')" class="block w-full text-left px-3 py-2 text-white hover:bg-purple-600 rounded">Home</button>
+                <button onclick="showSection('products')" class="block w-full text-left px-3 py-2 text-white hover:bg-purple-600 rounded">Products</button>
+                <button onclick="showSection('cart')" class="block w-full text-left px-3 py-2 text-white hover:bg-purple-600 rounded">Cart</button>
+                <button onclick="showSection('checkout')" class="block w-full text-left px-3 py-2 text-white hover:bg-purple-600 rounded">Checkout</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Sections -->
+    <div class="pt-16">
+        <!-- Home Section -->
+        <section id="home" class="section active">
+            <div class="max-w-7xl mx-auto">
+                <div class="grid md:grid-cols-2 gap-12 items-center min-h-[80vh]">
+                    <div>
+                        <h2 class="text-5xl md:text-7xl font-bold hero-font mb-6">
+                            WELCOME TO <span class="text-purple-400">FUTURE</span>
+                        </h2>
+                        <p class="text-xl text-gray-300 mb-8">
+                            Discover the ultimate gaming experience with our premium collection of games and accessories.
+                            Powered by next-gen technology and immersive 3D visuals.
+                        </p>
+                        <div class="space-x-4">
+                            <button onclick="showSection('products')" class="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-lg glow-hover transition-all">
+                                SHOP NOW
+                            </button>
+                            <button class="border border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white px-8 py-3 rounded-lg transition-all">
+                                EXPLORE
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="relative">
+                        <div id="model-container" class="glow">
+                            <!-- 3D Model will be rendered here -->
+                        </div>
+                        <div class="absolute bottom-4 left-4">
+                            <span class="bg-black/50 px-3 py-1 rounded text-sm">Interactive 3D Controller</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Featured Products -->
+                <div class="mt-20">
+                    <h3 class="text-3xl font-bold hero-font mb-8 text-center">FEATURED PRODUCTS</h3>
+                    <div class="grid md:grid-cols-3 gap-6">
+                        <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                            <div class="w-full h-48 bg-purple-600/20 rounded-lg mb-4 flex items-center justify-center">
+                                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ee0c6706-fea1-41ea-9bf4-3134ca894c60.png" alt="DualSense PS5 Wireless Controller in white with black accents" class="w-32 h-32 object-contain">
+                            </div>
+                            <h4 class="text-xl font-bold mb-2">DualSense Wireless Controller</h4>
+                            <p class="text-gray-400 mb-4">Next-gen gaming experience with haptic feedback</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-2xl font-bold text-purple-400">$69.99</span>
+                                <button onclick="addToCart('DualSense Controller', 69.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                            <div class="w-full h-48 bg-blue-600/20 rounded-lg mb-4 flex items-center justify-center">
+                                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/a6f41d21-0295-4081-8ded-335b0a83b136.png" alt="Premium gaming headset with RGB lighting and black finish" class="w-32 h-32 object-contain">
+                            </div>
+                            <h4 class="text-xl font-bold mb-2">Pro Gaming Headset</h4>
+                            <p class="text-gray-400 mb-4">7.1 Surround Sound with crystal clear audio</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-2xl font-bold text-blue-400">$129.99</span>
+                                <button onclick="addToCart('Pro Gaming Headset', 129.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                            <div class="w-full h-48 bg-purple-600/20 rounded-lg mb-4 flex items-center justify-center">
+                                <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/240f42a5-e6c1-4a88-812c-74109c59d2ae.png" alt="Mechanical gaming keyboard with RGB backlight and wrist rest" class="w-32 h-32 object-contain">
+                            </div>
+                            <h4 class="text-xl font-bold mb-2">Mechanical Keyboard</h4>
+                            <p class="text-gray-400 mb-4">RGB mechanical switches with wrist rest</p>
+                            <div class="flex justify-between items-center">
+                                <span class="text-2xl font-bold text-purple-400">$89.99</span>
+                                <button onclick="addToCart('Mechanical Keyboard', 89.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                    Add to Cart
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Products Section -->
+        <section id="products" class="section">
+            <div class="max-w-7xl mx-auto">
+                <h2 class="text-4xl font-bold hero-font mb-8 text-center">OUR PRODUCTS</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <!-- Product 1 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-purple-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/2bee17cd-b5b9-4af1-9279-bea00ec1cab6.png" alt="PlayStation 5 console with dual controller and accessories" class="w-40 h-40 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">PlayStation 5 Console</h4>
+                        <p class="text-gray-400 mb-4">Next-generation gaming console</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-purple-400">$499.99</span>
+                            <button onclick="addToCart('PS5 Console', 499.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 2 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-blue-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/78f0c5a1-b23d-45fa-b484-03e5776b02fc.png" alt="Xbox Series X console in black with green accent lighting" class="w-32 h-32 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">Xbox Series X</h4>
+                        <p class="text-gray-400 mb-4">Most powerful Xbox ever</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-blue-400">$499.99</span>
+                            <button onclick="addToCart('Xbox Series X', 499.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 3 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-purple-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/dd71e455-2c98-4bea-baf0-f1f435bc36c2.png" alt="27-inch 4K gaming monitor with thin bezels and adjustable stand" class="w-40 h-32 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">4K Gaming Monitor</h4>
+                        <p class="text-gray-400 mb-4">27" 144Hz 1ms response time</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-purple-400">$349.99</span>
+                            <button onclick="addToCart('4K Gaming Monitor', 349.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 4 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-blue-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/b81a7041-ae6b-4218-b35f-764c5d7dc7bc.png" alt="Ergonomic gaming chair with lumbar support and adjustable armrests" class="w-32 h-32 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">Premium Gaming Chair</h4>
+                        <p class="text-gray-400 mb-4">Ergonomic design with lumbar support</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-blue-400">$299.99</span>
+                            <button onclick="addToCart('Gaming Chair', 299.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 5 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-purple-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/3a5c0c77-de99-42d6-b55e-7462a62384d4.png" alt="Virtual reality headset with motion controllers and tracking sensors" class="w-32 h-32 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">VR Gaming Headset</h4>
+                        <p class="text-gray-400 mb-4">Immersive virtual reality experience</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-purple-400">$399.99</span>
+                            <button onclick="addToCart('VR Headset', 399.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 6 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-blue-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/ab339cc7-0685-4965-b950-82b7ac7e96bd.png" alt="Wireless gaming mouse with customizable RGB lighting and high DPI" class="w-32 h-32 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">Wireless Gaming Mouse</h4>
+                        <p class="text-gray-400 mb-4">16000 DPI with customizable RGB</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-blue-400">$79.99</span>
+                            <button onclick="addToCart('Gaming Mouse', 79.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 7 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-purple-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/fa2a3059-3755-466a-90f2-48288093ea48.png" alt="Wireless gamepad with analog sticks and vibration feedback" class="w-32 h-32 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">Wireless Gamepad</h4>
+                        <p class="text-gray-400 mb-4">Dual vibration with motion control</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-purple-400">$59.99</span>
+                            <button onclick="addToCart('Wireless Gamepad', 59.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Product 8 -->
+                    <div class="product-card bg-gray-800/50 rounded-xl p-6 glow">
+                        <div class="w-full h-48 bg-blue-600/20 rounded-lg mb-4 flex items-center justify-center">
+                            <img src="https://storage.googleapis.com/workspace-0f70711f-8b4e-4d94-86f1-2a93ccde5887/image/81a079bf-45b0-416f-af13-9fb8dba7e797.png" alt="Gaming soundbar with Dolby Atmos and multiple sound modes" class="w-40 h-24 object-contain">
+                        </div>
+                        <h4 class="text-xl font-bold mb-2">Gaming Soundbar</h4>
+                        <p class="text-gray-400 mb-4">Dolby Atmos with immersive audio</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-2xl font-bold text-blue-400">$199.99</span>
+                            <button onclick="addToCart('Gaming Soundbar', 199.99)" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded glow-hover">
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Cart Section -->
+        <section id="cart" class="section">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-4xl font-bold hero-font mb-8 text-center">YOUR CART</h2>
+                
+                <div id="cart-items" class="space-y-4 mb-8">
+                    <!-- Cart items will be dynamically added here -->
+                    <div class="text-center text-gray-400 py-12" id="empty-cart">
+                        Your cart is empty. Start shopping to add items!
+                    </div>
+                </div>
+                
+                <div class="bg-gray-800/50 rounded-xl p-6 glow">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-2xl font-bold">Order Summary</h3>
+                        <span id="total-items" class="text-gray-400">0 items</span>
+                    </div>
+                    
+                    <div class="space-y-3 mb-6">
+                        <div class="flex justify-between">
+                            <span>Subtotal</span>
+                            <span id="subtotal">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Shipping</span>
+                            <span id="shipping">$0.00</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>Tax</span>
+                            <span id="tax">$0.00</span>
+                        </div>
+                        <div class="flex justify-between text-xl font-bold border-t border-gray-600 pt-3">
+                            <span>Total</span>
+                            <span id="total">$0.00</span>
+                        </div>
+                    </div>
+                    
+                    <button onclick="showSection('checkout')" id="checkout-btn" class="w-full bg-purple-600 hover:bg-purple-700 py-3 rounded-lg glow-hover disabled:opacity-50 disabled:cursor-not-allowed">
+                        PROCEED TO CHECKOUT
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Checkout Section -->
+        <section id="checkout" class="section">
+            <div class="max-w-4xl mx-auto">
+                <h2 class="text-4xl font-bold hero-font mb-8 text-center">CHECKOUT</h2>
+                
+                <div class="grid md:grid-cols-2 gap-8">
+                    <!-- Order Summary -->
+                    <div class="checkout-step rounded-xl p-6">
+                        <h3 class="text-2xl font-bold mb-4">Order Summary</h3>
+                        <div id="checkout-items" class="space-y-3 mb-4">
+                            <!-- Checkout items will be added here -->
+                        </div>
+                        <div class="border-t border-gray-600 pt-3">
+                            <div class="flex justify-between font-bold">
+                                <span>Total</span>
+                                <span id="checkout-total">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Payment Form -->
+                    <div class="checkout-step rounded-xl p-6">
+                        <h3 class="text-2xl font-bold mb-4">Payment Information</h3>
+                        
+                        <form id="payment-form" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Full Name</label>
+                                <input type="text" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Email Address</label>
+                                <input type="email" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Shipping Address</label>
+                                <textarea required rows="3" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none"></textarea>
+                            </div>
+                            
+                            <div class="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">City</label>
+                                    <input type="text" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">ZIP Code</label>
+                                    <input type="text" required class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-sm font-medium mb-2">Card Number</label>
+                                <input type="text" required placeholder="1234 5678 9012 3456" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-4">
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">Expiry Date</label>
+                                    <input type="text" required placeholder="MM/YY" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-medium mb-2">CVV</label>
+                                    <input type="text" required placeholder="123" class="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-2 focus:border-purple-400 focus:outline-none">
+                                </div>
+                                <div class="flex items-end">
+                                    <button type="submit" class="w-full bg-purple-600 hover:bg-purple-700 py-2 px-4 rounded-lg glow-hover">
+                                        PAY NOW
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        // Navigation and Section Management
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById(sectionId).classList.add('active');
+            window.scrollTo(0, 0);
+            
+            // Jika pindah ke cart atau checkout, update display
+            if (sectionId === 'cart' || sectionId === 'checkout') {
+                updateCartDisplay();
+            }
+        }
+
+        function toggleMobileMenu() {
+            const menu = document.getElementById('mobile-menu');
+            menu.classList.toggle('hidden');
+        }
+
+        // Cart Management
+        let cart = [];
+        
+        // Load cart from localStorage saat halaman dimuat
+        function loadCart() {
+            const savedCart = localStorage.getItem('gameworld_cart');
+            if (savedCart) {
+                cart = JSON.parse(savedCart);
+            }
+            updateCartCount();
+            updateCartDisplay();
+        }
+        
+        function saveCart() {
+            localStorage.setItem('gameworld_cart', JSON.stringify(cart));
+        }
+        
+        function updateCartCount() {
+            const count = cart.reduce((total, item) => total + item.quantity, 0);
+            document.getElementById('cart-count').textContent = count;
+            document.getElementById('checkout-btn').disabled = count === 0;
+        }
+        
+        function addToCart(name, price) {
+            const existingItem = cart.find(item => item.name === name);
+            if (existingItem) {
+                existingItem.quantity++;
+            } else {
+                cart.push({ name, price, quantity: 1 });
+            }
+            saveCart();
+            updateCartCount();
+            updateCartDisplay();
+            showNotification(`${name} added to cart!`);
+        }
+        
+        function updateCartDisplay() {
+            const cartItems = document.getElementById('cart-items');
+            const emptyCart = document.getElementById('empty-cart');
+            const checkoutItems = document.getElementById('checkout-items');
+            
+            if (cart.length === 0) {
+                emptyCart.style.display = 'block';
+                cartItems.innerHTML = '';
+                checkoutItems.innerHTML = '';
+                updateCartTotals();
+                return;
+            }
+            
+            emptyCart.style.display = 'none';
+            
+            // Update cart items
+            cartItems.innerHTML = cart.map(item => `
+                <div class="cart-item rounded-lg p-4 flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold">${item.name}</h4>
+                        <p class="text-gray-400">$${item.price.toFixed(2)} each</p>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <div class="flex items-center space-x-2">
+                            <button onclick="updateQuantity('${item.name}', ${item.quantity - 1})" class="w-8 h-8 bg-gray-700 rounded hover:bg-gray-600">-</button>
+                            <span class="font-bold">${item.quantity}</span>
+                            <button onclick="updateQuantity('${item.name}', ${item.quantity + 1})" class="w-8 h-8 bg-gray-700 rounded hover:bg-gray-600">+</button>
+                        </div>
+                        <span class="font-bold text-purple-400">$${(item.price * item.quantity).toFixed(2)}</span>
+                        <button onclick="removeFromCart('${item.name}')" class="text-red-400 hover:text-red-300">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Update checkout items
+            checkoutItems.innerHTML = cart.map(item => `
+                <div class="flex justify-between">
+                    <span>${item.name} x${item.quantity}</span>
+                    <span>$${(item.price * item.quantity).toFixed(2)}</span>
+                </div>
+            `).join('');
+            
+            updateCartTotals();
+        }
+        
+        function updateQuantity(name, newQuantity) {
+            const item = cart.find(item => item.name === name);
+            if (item) {
+                if (newQuantity <= 0) {
+                    removeFromCart(name);
+                } else {
+                    item.quantity = newQuantity;
+                    saveCart();
+                    updateCartCount();
+                    updateCartDisplay();
+                }
+            }
+        }
+        
+        function removeFromCart(name) {
+            cart = cart.filter(item => item.name !== name);
+            saveCart();
+            updateCartCount();
+            updateCartDisplay();
+        }
+        
+        function updateCartTotals() {
+            const subtotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+            const shipping = subtotal > 0 ? 15 : 0;
+            const tax = subtotal * 0.08;
+            const total = subtotal + shipping + tax;
+            
+            document.getElementById('total-items').textContent = `${cart.reduce((total, item) => total + item.quantity, 0)} items`;
+            document.getElementById('subtotal').textContent = `$${subtotal.toFixed(2)}`;
+            document.getElementById('shipping').textContent = `$${shipping.toFixed(2)}`;
+            document.getElementById('tax').textContent = `$${tax.toFixed(2)}`;
+            document.getElementById('total').textContent = `$${total.toFixed(2)}`;
+            document.getElementById('checkout-total').textContent = `$${total.toFixed(2)}`;
+        }
+        
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed top-20 right-4 bg-purple-600 text-white px-6 py-3 rounded-lg shadow-lg z-50 animate-pulse';
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+        
+        // 3D Model Initialization
+        function init3DModel() {
+            const container = document.getElementById('model-container');
+            if (!container) return;
+            
+            try {
+                const scene = new THREE.Scene();
+                const camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+                const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+                
+                renderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(renderer.domElement);
+                
+                // Add lighting
+                const ambientLight = new THREE.AmbientLight(0x404040);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0x8a2be2, 1);
+                directionalLight.position.set(5, 5, 5);
+                scene.add(directionalLight);
+                
+                const pointLight = new THREE.PointLight(0x00b4d8, 1);
+                pointLight.position.set(-5, -5, -5);
+                scene.add(pointLight);
+                
+                // Create a simple 3D controller model
+                const geometry = new THREE.BoxGeometry(2, 0.5, 1);
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: 0x1a1a2e,
+                    shininess: 100,
+                    specular: 0x8a2be2
+                });
+                
+                const controller = new THREE.Mesh(geometry, material);
+                scene.add(controller);
+                
+                // Add buttons
+                const buttonGeometry = new THREE.SphereGeometry(0.1, 32, 32);
+                const buttonMaterial = new THREE.MeshPhongMaterial({ color: 0x00b4d8 });
+                
+                const button1 = new THREE.Mesh(buttonGeometry, buttonMaterial);
+                button1.position.set(0.5, 0.3, 0.3);
+                controller.add(button1);
+                
+                const button2 = new THREE.Mesh(buttonGeometry, buttonMaterial);
+                button2.position.set(-0.5, 0.3, 0.3);
+                controller.add(button2);
+                
+                camera.position.z = 5;
+                
+                function animate() {
+                    requestAnimationFrame(animate);
+                    
+                    controller.rotation.x += 0.01;
+                    controller.rotation.y += 0.02;
+                    
+                    renderer.render(scene, camera);
+                }
+                
+                animate();
+                
+                // Handle window resize
+                window.addEventListener('resize', () => {
+                    camera.aspect = container.clientWidth / container.clientHeight;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(container.clientWidth, container.clientHeight);
+                });
+            } catch (error) {
+                console.log('3D model initialization failed:', error);
+                container.innerHTML = '<div class="flex items-center justify-center h-full"><p class="text-gray-400">3D Model Preview</p></div>';
+            }
+        }
+        
+        // Form Submission
+        document.getElementById('payment-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('Payment successful! Thank you for your purchase.');
+            cart = [];
+            saveCart();
+            updateCartCount();
+            updateCartDisplay();
+            showSection('home');
+        });
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            loadCart();
+            init3DModel();
+            
+            // Debug: Log untuk memastikan fungsi addToCart tersedia
+            console.log('addToCart function available:', typeof addToCart);
+        });
+    </script>
+</body>
+</html>
